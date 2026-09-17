@@ -13,7 +13,7 @@ process.stdout.write('delivery worker started\n');
 
 const shutdown = async (): Promise<void> => {
   await worker.close();
-  connection.disconnect();
+  await connection.quit();
   process.exit(0);
 };
 process.once('SIGINT', () => void shutdown());

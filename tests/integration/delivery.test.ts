@@ -80,7 +80,7 @@ afterAll(async () => {
   await api.close();
   await new Promise<void>((resolve) => receiver.close(() => resolve()));
   await deliveryQueue.close();
-  connection.disconnect();
+  await connection.quit();
   await db.$disconnect();
 });
 
