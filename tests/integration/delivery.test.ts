@@ -38,7 +38,7 @@ async function request(method: string, path: string, body?: unknown, headers: Re
     headers: { authorization: `Bearer ${apiKey}`, ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...headers },
     ...(body === undefined ? {} : { payload: JSON.stringify(body) }),
   });
-  return { status: response.statusCode, json: response.json() as Record<string, unknown> & { id: string } };
+  return { status: response.statusCode, json: response.json<Record<string, unknown> & { id: string }>() };
 }
 
 async function drain(): Promise<void> {
@@ -64,7 +64,7 @@ beforeAll(async () => {
 
   api = await buildApp();
   const created = await api.inject({ method: 'POST', url: '/applications', headers: { authorization: `Bearer ${env.ADMIN_API_KEY}` }, payload: { name: 'test' } });
-  apiKey = (created.json() as { apiKey: string }).apiKey;
+  apiKey = created.json<{ apiKey: string }>().apiKey;
 });
 
 beforeEach(async () => {
@@ -216,17 +216,11 @@ describe('publishing and delivering', () => {
 });
 
 describe('isolation and screening', () => {
-  it('rejects an endpoint that resolves to private space when insecure endpoints are not allowed', async () => {
-    // The test environment allows insecure endpoints so the loopback receiver
-    // works; the guard itself is unit-tested with a stubbed resolver.
-    expect(env.ALLOW_INSECURE_ENDPOINTS).toBe(true);
-  });
-
   it('does not let one application see another\'s endpoints', async () => {
     const mine = await request('POST', '/endpoints', { url: receiverUrl });
 
     const other = await api.inject({ method: 'POST', url: '/applications', headers: { authorization: `Bearer ${env.ADMIN_API_KEY}` }, payload: { name: 'other' } });
-    const otherKey = (other.json() as { apiKey: string }).apiKey;
+    const otherKey = other.json<{ apiKey: string }>().apiKey;
     const probe = await api.inject({ method: 'GET', url: `/endpoints/${mine.json.id}`, headers: { authorization: `Bearer ${otherKey}` } });
     expect(probe.statusCode).toBe(404);
   });
@@ -237,7 +231,7 @@ describe('isolation and screening', () => {
   });
 
   it('serves an OpenAPI document that lists every route', async () => {
-    const spec = (await api.inject({ method: 'GET', url: '/docs/json' })).json() as { openapi: string; paths: Record<string, unknown> };
+    const spec = (await api.inject({ method: 'GET', url: '/docs/json' })).json<{ openapi: string; paths: Record<string, unknown> }>();
     expect(spec.openapi).toBe('3.1.0');
     for (const path of ['/applications', '/endpoints', '/endpoints/{id}', '/messages', '/deliveries', '/deliveries/{id}/replay']) {
       expect(Object.keys(spec.paths)).toContain(path);
