@@ -1,0 +1,12 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: hookrelay-postgres
+    environment: { POSTGRES_USER: hookrelay, POSTGRES_PASSWORD: hookrelay_local_dev, POSTGRES_DB: hookrelay }
+    ports: ["127.0.0.1:5434:5432"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U hookrelay -d hookrelay"], interval: 2s, timeout: 3s, retries: 20 }
+  redis:
+    image: redis:7-alpine
+    container_name: hookrelay-redis
+    ports: ["127.0.0.1:6381:6379"]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 2s, timeout: 3s, retries: 20 }

@@ -1,0 +1,48 @@
+{
+  "name": "hookrelay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Outbound webhook delivery service: signed payloads (Standard Webhooks), retries with backoff, idempotent publishing, dead-lettering, replay, per-application API keys, OpenAPI.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/server.ts",
+    "start": "node --env-file=.env dist/server.js",
+    "worker": "tsx --env-file=.env src/worker/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src tests scripts",
+    "test": "vitest run --config vitest.unit.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down -v",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "openapi": "tsx --env-file=.env scripts/export-openapi.ts"
+  },
+  "dependencies": {
+    "@fastify/swagger": "^9.4.0",
+    "@fastify/swagger-ui": "^5.2.0",
+    "@fastify/type-provider-typebox": "^6.1.0",
+    "@prisma/client": "^6.2.1",
+    "@sinclair/typebox": "^0.34.11",
+    "bullmq": "^5.34.6",
+    "fastify": "^5.2.0",
+    "ioredis": "^5.4.2",
+    "undici": "^6.21.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "prisma": "^6.2.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vitest": "^2.1.8"
+  },
+  "license": "BUSL-1.1"
+}
