@@ -6,7 +6,7 @@ import { MAX_ATTEMPTS } from '../../src/core/backoff.js';
 import { verify } from '../../src/core/signing.js';
 import { db } from '../../src/db.js';
 import { env } from '../../src/env.js';
-import { connection, deliveryQueue } from '../../src/queue.js';
+import { closeQueue, deliveryQueue } from '../../src/queue.js';
 import { processDelivery } from '../../src/worker/process.js';
 
 /**
@@ -73,14 +73,13 @@ beforeEach(async () => {
   await db.delivery.deleteMany();
   await db.message.deleteMany();
   await db.endpoint.deleteMany();
-  await deliveryQueue.obliterate({ force: true });
+  await deliveryQueue().obliterate({ force: true });
 });
 
 afterAll(async () => {
   await api.close();
   await new Promise<void>((resolve) => receiver.close(() => resolve()));
-  await deliveryQueue.close();
-  await connection.quit();
+  await closeQueue();
   await db.$disconnect();
 });
 
