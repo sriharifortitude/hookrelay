@@ -1,10 +1,10 @@
 import { Worker } from 'bullmq';
 
-import { DELIVERY_QUEUE, connection, type DeliveryJob } from '../queue.js';
+import { DELIVERY_QUEUE, closeQueue, redisConnection, type DeliveryJob } from '../queue.js';
 import { processDelivery } from './process.js';
 
 const worker = new Worker<DeliveryJob>(DELIVERY_QUEUE, (job) => processDelivery(job.data.deliveryId), {
-  connection,
+  connection: redisConnection(),
   concurrency: 16,
 });
 
@@ -13,7 +13,7 @@ process.stdout.write('delivery worker started\n');
 
 const shutdown = async (): Promise<void> => {
   await worker.close();
-  await connection.quit();
+  await closeQueue();
   process.exit(0);
 };
 process.once('SIGINT', () => void shutdown());
