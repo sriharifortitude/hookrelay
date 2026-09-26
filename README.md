@@ -33,7 +33,15 @@ POST /deliveries/:id/replay     send it again
 ```
 
 OpenAPI 3.1 at `/docs`, generated from the route schemas — [`openapi.json`](openapi.json)
-is committed and never hand-edited.
+is committed and never hand-edited. CI checks it isn't stale, then gates
+it on [apilint](https://github.com/sriharifortitude/apilint) (ten OWASP
+API Security Top 10 checks), which caught a genuinely undocumented
+response schema on `/health` before this line existed — fixed — and two
+findings that are real matches for its heuristic but not real problems
+(`apiKey`/`secret` are shown exactly once at creation, confirmed against
+every `GET` response, not assumed), waived by name with the evidence in
+[`apilint-waivers.yaml`](apilint-waivers.yaml) rather than silently
+excluded.
 
 - **Signatures follow [Standard Webhooks](https://www.standardwebhooks.com).**
   Not a home-grown scheme: a receiver with any existing Standard Webhooks
@@ -124,6 +132,8 @@ npm run test:integration # 12 against real Postgres, Redis and HTTP: fan-out,
   old one signing; nothing yet drops the old one after a window.
 - **No rate limiting per endpoint.** A burst of messages is a burst of
   deliveries. Concurrency is capped at the worker, not per receiver.
+  Tracked as an accepted, dated gap in `apilint-waivers.yaml` (review by
+  2027-03-01), not silently excluded from the API security scan.
 - **No inbound webhooks.** This sends. Receiving, transforming and forwarding
   is a different product.
 - **Single region, single queue.** Fine for tens of thousands of deliveries a

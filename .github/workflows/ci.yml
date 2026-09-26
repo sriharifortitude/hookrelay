@@ -45,3 +45,9 @@ jobs:
           cp openapi.json /tmp/committed.json
           npx tsx scripts/export-openapi.ts
           diff /tmp/committed.json openapi.json
+      - uses: actions/setup-go@v5
+        with: { go-version: '1.27' }
+      - name: apilint -- fail the build on a real API security finding, not just a schema drift
+        run: |
+          go install github.com/sriharifortitude/apilint/cmd/apilint@v0.1.0
+          apilint scan --waivers apilint-waivers.yaml openapi.json
