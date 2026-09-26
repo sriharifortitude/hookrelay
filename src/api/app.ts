@@ -124,7 +124,11 @@ export async function buildApp(): Promise<FastifyInstance> {
     return reply.status(status).send({ error: status >= 500 ? 'Internal error.' : error.message });
   });
 
-  app.get('/health', { schema: { tags: ['system'], security: [] } }, () => ({ ok: true }));
+  app.get(
+    '/health',
+    { schema: { tags: ['system'], security: [], response: { 200: Type.Object({ ok: Type.Boolean() }) } } },
+    () => ({ ok: true }),
+  );
 
   // --- applications (admin) ---------------------------------------------
 
