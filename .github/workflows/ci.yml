@@ -51,3 +51,42 @@ jobs:
         run: |
           go install github.com/sriharifortitude/apilint/cmd/apilint@v0.1.0
           apilint scan --waivers apilint-waivers.yaml openapi.json
+
+  image:
+    name: Production image migrates, serves and runs the worker, read-only
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env: { POSTGRES_USER: hookrelay, POSTGRES_PASSWORD: hookrelay_local_dev, POSTGRES_DB: hookrelay }
+        ports: ['5434:5432']
+        options: --health-cmd "pg_isready -U hookrelay" --health-interval 2s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6381:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 2s --health-timeout 3s --health-retries 20
+    env:
+      ADMIN_API_KEY: ci-only-admin-key-not-a-secret-0000000000
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t hookrelay:ci .
+      - name: The image runs as a non-root user
+        run: test "$(docker inspect -f '{{.Config.User}}' hookrelay:ci)" = node
+      # --read-only matches readonlyRootFilesystem in the ECS task
+      # definitions (terraform-aws-hookrelay); /tmp is the one writable path.
+      - name: Migrate, then API and worker from the same image
+        run: |
+          run="docker run --network host --read-only --tmpfs /tmp
+            -e DATABASE_URL=postgresql://hookrelay:hookrelay_local_dev@127.0.0.1:5434/hookrelay?schema=public
+            -e REDIS_URL=redis://127.0.0.1:6381 -e ADMIN_API_KEY"
+          $run --rm hookrelay:ci node_modules/.bin/prisma migrate deploy
+          $run -d --name api hookrelay:ci
+          $run -d --name worker hookrelay:ci node dist/worker/main.js
+          for i in $(seq 1 30); do curl -sf localhost:4000/health && break; sleep 1; done
+          curl -sf localhost:4000/health
+          curl -sf -X POST localhost:4000/applications \
+            -H "Authorization: Bearer $ADMIN_API_KEY" -H 'Content-Type: application/json' \
+            -d '{"name":"ci"}' | grep -q '"apiKey"'
+          docker logs worker 2>&1 | grep -q 'delivery worker started'
+      - if: failure()
+        run: docker logs api; docker logs worker

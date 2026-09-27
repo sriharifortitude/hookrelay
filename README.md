@@ -110,6 +110,27 @@ curl -X POST localhost:4000/messages \
   -d '{"eventType":"order.created","payload":{"orderId":42}}'
 ```
 
+### In a container
+
+One image, three roles picked by the command. It runs as a non-root
+user, and CI runs all three from the built image on a read-only root
+filesystem against real Postgres and Redis:
+
+```bash
+docker run --rm -e DATABASE_URL ghcr.io/sriharifortitude/hookrelay:0.2.0 node_modules/.bin/prisma migrate deploy
+docker run -d -p 4000:4000 -e DATABASE_URL -e REDIS_URL -e ADMIN_API_KEY ghcr.io/sriharifortitude/hookrelay:0.2.0
+docker run -d -e DATABASE_URL -e REDIS_URL -e ADMIN_API_KEY ghcr.io/sriharifortitude/hookrelay:0.2.0 node dist/worker/main.js
+```
+
+Configuration comes only from the environment. Before 0.2.0 there was no
+image, and `npm start` required a `.env` file. Writing the AWS deployment
+([terraform-aws-hookrelay](https://github.com/sriharifortitude/terraform-aws-hookrelay))
+is what showed this had never been packaged to run anywhere else. One
+thing to know locally: Prisma's generated client loads `.env` by itself,
+so with a `.env` present, a missing variable in the real environment is
+silently filled in from the file. The image excludes `.env`, so the
+startup config check applies there.
+
 Verifying on the receiving side, in any language, is the Standard Webhooks
 algorithm: HMAC-SHA256 of `${webhook-id}.${webhook-timestamp}.${body}` with
 the base64-decoded secret, compared in constant time against the
